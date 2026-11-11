@@ -436,12 +436,13 @@ void MainWindow::information()
  */
 void MainWindow::updateEventList()
 {
-    QDate selectedDate = this->mainCalendar->selectedDate();
-    QString targetMonthDay = selectedDate.toString("MM-dd");
+    QString targetDateStr = this->mainCalendar->selectedDate().toString("yyyy-MM-dd");
     this->eventList->clear();
+
     QSqlQuery readQuery;
-    readQuery.prepare("SELECT id, start_time, summary, is_allday FROM events WHERE event_date LIKE :monthday OR (recurrence_type = 4 AND substr(event_date, 6, 5) = :monthday) ORDER BY start_time ASC");
-    readQuery.bindValue(":monthday", targetMonthDay);
+    readQuery.prepare("SELECT id, start_time, summary, is_allday FROM events WHERE event_date = :date ORDER BY start_time ASC");
+    readQuery.bindValue(":date", targetDateStr);
+
     if (readQuery.exec()) {
         while (readQuery.next()) {
             QVariant eventId  = readQuery.value(0);
@@ -457,12 +458,44 @@ void MainWindow::updateEventList()
             //auto *listItem = new QListWidgetItem(startTime + " - " + summary);
             auto *listItem = new QListWidgetItem(displayText);
             listItem->setData(Qt::UserRole, eventId);
+
             this->eventList->addItem(listItem);
         }
     } else {
         qDebug() << "Failed to fetch event metrics for selected date:" << readQuery.lastError().text();
     }
 }
+
+// void MainWindow::updateEventList()
+// {
+//     QDate selectedDate = this->mainCalendar->selectedDate();
+//     QString targetMonthDay = selectedDate.toString("MM-dd");
+//     this->eventList->clear();
+//     QSqlQuery readQuery;
+//     readQuery.prepare("SELECT id, start_time, summary, is_allday FROM events WHERE event_date LIKE :monthday OR (recurrence_type = 4 AND substr(event_date, 6, 5) = :monthday) ORDER BY start_time ASC");
+//     readQuery.bindValue(":monthday", targetMonthDay);
+//     if (readQuery.exec()) {
+//         while (readQuery.next()) {
+//             QVariant eventId  = readQuery.value(0);
+//             QString startTime = readQuery.value(1).toString();
+//             QString summary   = readQuery.value(2).toString();
+//             const bool isAllDay =readQuery.value(3).toInt();
+//             //const bool isAllDay = selectQuery.value("is_allday").toInt() != 0;
+//             const QString displayText = isAllDay
+//             ? "All day - " + summary
+//             : startTime + " - " + summary;
+//
+//
+//             //auto *listItem = new QListWidgetItem(startTime + " - " + summary);
+//             auto *listItem = new QListWidgetItem(displayText);
+//             listItem->setData(Qt::UserRole, eventId);
+//             this->eventList->addItem(listItem);
+//         }
+//     } else {
+//         qDebug() << "Failed to fetch event metrics for selected date:" << readQuery.lastError().text();
+//     }
+// }
+
 
 
 /**
