@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
-project(caspercalendar CXX)
+
+project(caspercalendar LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,6 +16,14 @@ set(SOURCES
     src/dictionary.cpp
     src/diphone.cpp
     src/synthesizer.cpp
+
+    # CopperSpice's resource compiler generates this file from app.qrc
+    qrc_app.cpp
+)
+
+# Generate qrc_app.cpp from the resource file.
+COPPERSPICE_RESOURCES(
+    ${CMAKE_CURRENT_SOURCE_DIR}/app.qrc
 )
 
 add_executable(caspercalendar ${SOURCES})
@@ -24,3 +33,4 @@ target_link_libraries(caspercalendar PRIVATE
     CopperSpice::CsGui
     CopperSpice::CsSql
 )
+

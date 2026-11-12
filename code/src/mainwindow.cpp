@@ -24,7 +24,6 @@
 #include <QDebug>
 #include <iostream> //back to using raw C++
 
-
 /**
  * @brief MainWindow constructor.
  * @param parent The parent widget
@@ -37,6 +36,8 @@ m_voiceDict(new Dictionary())
     // sSetup window title and size
     setWindowTitle("Casper Calendar");
     resize(600, 450);
+    //setWindowIcon(QIcon(":/icons/casper.png"));
+    setWindowIcon(QIcon(":/icons/casper.png"));
 
 
     // Configure base font size
@@ -51,6 +52,8 @@ m_voiceDict(new Dictionary())
     // Initialize mainCalendar and eventList as class members
     this->mainCalendar = new QCalendarWidget(central);
     mainCalendar->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+    mainCalendar->setSelectedDate(QDate::currentDate());
+
     this->eventList = new QListWidget(central);
     this->mainCalendar->setGridVisible(true);
     mainLayout->addWidget(this->mainCalendar);
@@ -168,7 +171,7 @@ m_voiceDict(new Dictionary())
 
     //Setup font
     QFont defaultFont = QApplication::font();
-    //qDebug() << "Default Font:" << defaultFont.family() << "Size:" << defaultFont.pointSize();
+    // qDebug() << "Default Font:" << defaultFont.family() << "Size:" << defaultFont.pointSize();
     // Set the global font for the application using m_font_size
     QFont appFont(defaultFont.family(), m_font_size); // Specify font family and size
     QApplication::setFont(appFont);
@@ -357,6 +360,12 @@ void MainWindow::markEventsOnCalendar()
         calendar->setDateTextFormat(
             date, isPriority ? priorityFormat : standardFormat);
     }
+
+    const QDate today = QDate::currentDate();
+
+    QTextCharFormat todayFormat = calendar->dateTextFormat(today);
+    todayFormat.setFontUnderline(true);
+    calendar->setDateTextFormat(today, todayFormat);
 }
 
 
@@ -366,13 +375,6 @@ void MainWindow::markEventsOnCalendar()
  */
 void MainWindow::onCalendarPageChanged()
 {
-    const QDate firstOfMonth(
-        mainCalendar->yearShown(),
-                             mainCalendar->monthShown(),
-                             1);
-
-    mainCalendar->setSelectedDate(firstOfMonth);
-
     eventList->clear();
     markEventsOnCalendar();
 }
@@ -397,7 +399,7 @@ void MainWindow::information()
     box.setWindowTitle("System Info");
     box.setTextFormat(Qt::RichText);
 
-    QString csVersion="0.2.1";
+    //QString csVersion="0.2.1";
 
     QString msg = "<b>Casper Calendar (CS) Version: </b>";
     msg.append(PROJECT_VERSION);
@@ -427,7 +429,6 @@ void MainWindow::information()
 
 }
 
-
 /**
  * @brief Updates the event list with events for the selected date.
  *
@@ -436,67 +437,43 @@ void MainWindow::information()
  */
 void MainWindow::updateEventList()
 {
-    QString targetDateStr = this->mainCalendar->selectedDate().toString("yyyy-MM-dd");
+
+    const QString selectedDate = this->mainCalendar->selectedDate().toString("yyyy-MM-dd");
     this->eventList->clear();
 
+    const QString sql =
+    "SELECT id, event_date, start_time, summary, is_allday, is_priority "
+    "FROM events "
+    "WHERE event_date = ? "
+    "OR (recurrence_type = 4 "
+    "    AND substr(event_date, 6, 5) = substr(?, 6, 5))";
+
     QSqlQuery readQuery;
-    readQuery.prepare("SELECT id, start_time, summary, is_allday FROM events WHERE event_date = :date ORDER BY start_time ASC");
-    readQuery.bindValue(":date", targetDateStr);
+    readQuery.prepare(sql);
+    readQuery.addBindValue(selectedDate);
+    readQuery.addBindValue(selectedDate);
+
 
     if (readQuery.exec()) {
         while (readQuery.next()) {
-            QVariant eventId  = readQuery.value(0);
-            QString startTime = readQuery.value(1).toString();
-            QString summary   = readQuery.value(2).toString();
-            const bool isAllDay =readQuery.value(3).toInt();
-            //const bool isAllDay = selectQuery.value("is_allday").toInt() != 0;
+            const QString eventId   = readQuery.value(0).toString();
+            const QString startTime = readQuery.value(2).toString();
+            const QString summary   = readQuery.value(3).toString();
+            const bool isAllDay     = readQuery.value(4).toInt() != 0;
+
             const QString displayText = isAllDay
             ? "All day - " + summary
             : startTime + " - " + summary;
 
-
-            //auto *listItem = new QListWidgetItem(startTime + " - " + summary);
             auto *listItem = new QListWidgetItem(displayText);
             listItem->setData(Qt::UserRole, eventId);
-
             this->eventList->addItem(listItem);
         }
     } else {
-        qDebug() << "Failed to fetch event metrics for selected date:" << readQuery.lastError().text();
+        qDebug() << "Failed to fetch events:"
+        << readQuery.lastError().text();
     }
 }
-
-// void MainWindow::updateEventList()
-// {
-//     QDate selectedDate = this->mainCalendar->selectedDate();
-//     QString targetMonthDay = selectedDate.toString("MM-dd");
-//     this->eventList->clear();
-//     QSqlQuery readQuery;
-//     readQuery.prepare("SELECT id, start_time, summary, is_allday FROM events WHERE event_date LIKE :monthday OR (recurrence_type = 4 AND substr(event_date, 6, 5) = :monthday) ORDER BY start_time ASC");
-//     readQuery.bindValue(":monthday", targetMonthDay);
-//     if (readQuery.exec()) {
-//         while (readQuery.next()) {
-//             QVariant eventId  = readQuery.value(0);
-//             QString startTime = readQuery.value(1).toString();
-//             QString summary   = readQuery.value(2).toString();
-//             const bool isAllDay =readQuery.value(3).toInt();
-//             //const bool isAllDay = selectQuery.value("is_allday").toInt() != 0;
-//             const QString displayText = isAllDay
-//             ? "All day - " + summary
-//             : startTime + " - " + summary;
-//
-//
-//             //auto *listItem = new QListWidgetItem(startTime + " - " + summary);
-//             auto *listItem = new QListWidgetItem(displayText);
-//             listItem->setData(Qt::UserRole, eventId);
-//             this->eventList->addItem(listItem);
-//         }
-//     } else {
-//         qDebug() << "Failed to fetch event metrics for selected date:" << readQuery.lastError().text();
-//     }
-// }
-
-
 
 /**
  * @brief Goes to today's date in the calendar.
@@ -922,8 +899,6 @@ void MainWindow::deleteAllEvents()
     }
 }
 
-
-
 /**
  * @brief Set Preferences
  */
@@ -966,17 +941,6 @@ void MainWindow::setPreferences()
         // Save the color values
         settings.setValue("colors/event", QVariant::fromValue(m_eventColor));
         settings.setValue("colors/priority", QVariant::fromValue(m_priorityColor));
-
-        // qDebug() << "Captured Preferences";
-        // qDebug() << "Talk: " << m_talk;
-        // qDebug() << "Talk At Startup: " << m_talk_startup;
-        // qDebug() << "Upcoming: " << m_upcoming;
-        // qDebug() << "Upcoming Days: " << m_upcoming_days;
-        // qDebug() << "Speak Tempo: " << m_tempo;
-        // qDebug() << "Font Size: " << m_font_size;
-        // qDebug() << "Event Colour: " << m_eventColor.name();
-        // qDebug() << "Priority Colour: " << m_priorityColor.name();
-
         //Refresh font Size
         QFont defaultFont = QApplication::font();
         // Set the global font for the application

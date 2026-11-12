@@ -13,12 +13,13 @@
 #include <QDate>
 #include <QList>
 #include <QSettings>
+#include <QIcon>
 #include "synthesizer.h"
 #include "dictionary.h"
 #include "preferences.h"
 #include "calendarevent.h"
 
-#define PROJECT_VERSION "0.1.0"
+#define PROJECT_VERSION "0.1.2"
 
 
 class MainWindow : public QMainWindow
