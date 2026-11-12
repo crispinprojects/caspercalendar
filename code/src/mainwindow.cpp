@@ -442,7 +442,7 @@ void MainWindow::updateEventList()
     this->eventList->clear();
 
     const QString sql =
-    "SELECT id, event_date, start_time, summary, is_allday, is_priority "
+    "SELECT id, event_date, start_time, summary, description, location, is_allday, is_priority "
     "FROM events "
     "WHERE event_date = ? "
     "OR (recurrence_type = 4 "
@@ -459,11 +459,24 @@ void MainWindow::updateEventList()
             const QString eventId   = readQuery.value(0).toString();
             const QString startTime = readQuery.value(2).toString();
             const QString summary   = readQuery.value(3).toString();
-            const bool isAllDay     = readQuery.value(4).toInt() != 0;
+            const QString description  = readQuery.value(4).toString();
+            const QString location   = readQuery.value(5).toString();
+            const bool isAllDay     = readQuery.value(6).toInt() != 0;
 
-            const QString displayText = isAllDay
-            ? "All day - " + summary
-            : startTime + " - " + summary;
+            QString displayText="";
+            if (isAllDay) displayText.append("All day -");
+            else displayText.append(startTime);
+            displayText.append(" ");
+            displayText.append(summary);
+            if (!description.isEmpty())
+            {
+                displayText.append(", ");
+                displayText.append(description);
+            }
+            if (!location.isEmpty()) {
+                displayText.append(", ");
+                displayText.append(location);
+            }
 
             auto *listItem = new QListWidgetItem(displayText);
             listItem->setData(Qt::UserRole, eventId);
@@ -705,14 +718,7 @@ void MainWindow::newEvent()
         return;
     }
 
-    const QString displayText = isAllDay
-    ? "All day - " + summaryText
-    : startTime + " - " + summaryText;
-
-    QListWidgetItem *item = new QListWidgetItem(displayText);
-    item->setData(Qt::UserRole, query.lastInsertId());
-
-    eventList->addItem(item);
+    updateEventList();
     markEventsOnCalendar();
 }
 
@@ -825,11 +831,7 @@ void MainWindow::editEvent()
         return;
     }
 
-    const QString displayText = updatedAllDay
-    ? "All day - " + summary
-    : start + " - " + summary;
-
-    selectedItem->setText(displayText);
+    updateEventList();
     markEventsOnCalendar();
 }
 

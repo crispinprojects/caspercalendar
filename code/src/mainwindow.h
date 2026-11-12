@@ -19,7 +19,7 @@
 #include "preferences.h"
 #include "calendarevent.h"
 
-#define PROJECT_VERSION "0.1.2"
+#define PROJECT_VERSION "0.1.3"
 
 
 class MainWindow : public QMainWindow
